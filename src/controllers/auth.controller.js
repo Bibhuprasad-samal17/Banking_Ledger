@@ -8,44 +8,40 @@ const jwt = require("jsonwebtoken");
 
 
 
- function userRegsterController(req,res){
-     try {
-        const { email, name, password } = req.body;
+async function userRegisterController(req, res) {
+    const { email, password, name } = req.body
 
-        const isExists =  userModel.findOne({ email: email })
+    const isExists = await userModel.findOne({
+        email: email
+    })
 
-        if (isExists) {
-            return res.status(422).json({
-                message: "User already exists with this email",
-                status: "failed"
-            })
-        }
-
-        const user =  userModel.create({ email, password, name })
-
-        const secret = process.env.JWT_SECRET
-        if (!secret) {
-            console.error('JWT_SECRET is not set in environment')
-            return res.status(500).json({ message: 'Server misconfiguration' })
-        }
-
-        const token = jwt.sign({ userId: user._id }, secret, { expiresIn: "3d" })
-        // set cookie with sensible defaults
-        res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' })
-
-        res.status(201).json({
-            user: {
-                _id: user._id,
-                email: user.email,
-                name: user.name
-            },
-            token
+    if (isExists) {
+        return res.status(422).json({
+            message: "User already exists with email.",
+            status: "failed"
         })
-    } catch (err) {
-        console.error('Error in userRegsterController:', err)
-        res.status(500).json({ message: 'Internal server error' })
     }
+
+    const user = await userModel.create({
+        email, password, name
+    })
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "3d" })
+
+    res.cookie("token", token)
+
+    res.status(201).json({
+        user: {
+            _id: user._id,
+            email: user.email,
+            name: user.name
+        },
+        token
+    })
+
+    await emailService.sendRegistrationEmail(user.email, user.name)
 }
+    
 
 
-module.exports = {userRegsterController }
+module.exports = {userRegisterController}
