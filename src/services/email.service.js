@@ -1,10 +1,54 @@
-// Minimal email service stub — replace with real provider later
-async function sendRegistrationEmail(email, name) {
-    // In production replace with real email sending (nodemailer, SES, etc.)
-    console.log(`Sending registration email to ${email} (name: ${name})`);
-    return Promise.resolve();
+require('dotenv').config();
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    type: 'OAuth2',
+    user: process.env.EMAIL_USER,
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    refreshToken: process.env.REFRESH_TOKEN,
+  },
+});
+
+// Verify the connection configuration
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('Error connecting to email server:', error);
+  } else {
+    console.log('Email server is ready to send messages');
+  }
+});
+
+// Function to send email
+const sendEmail = async (to, subject, text, html) => {
+  try {
+    const info = await transporter.sendMail({
+      from: `"Banking-Ledger" <${process.env.EMAIL_USER}>`, // sender address
+      to, // list of receivers
+      subject, // Subject line
+      text, // plain text body
+      html, // html body
+    });
+
+    console.log('Message sent: %s', info.messageId);
+    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+  } catch (error) {
+    console.error('Error sending email:', error);
+  }
+};
+
+async function sendRegisterEmail(userEmail, name) {
+  const subject = 'Welcome to Banking-Ledger!';
+  const text = `Hi ${name},\n\nThank you for registering with Banking-Ledger. We're excited to have you on board! If you have any questions or need assistance, feel free to reach out to our support team.\n\nBest regards,\nThe Banking-Ledger Team`;
+  const html = `<p>Hi ${name},</p><p>Thank you for registering with <strong>Banking-Ledger</strong>. We're excited to have you on board! If you have any questions or need assistance, feel free to reach out to our support team.</p><p>Best regards,<br>The Banking-Ledger Team</p>`;
+
+  await sendEmail(userEmail, subject, text, html);
 }
 
+
 module.exports = {
-    sendRegistrationEmail
+  sendRegisterEmail,
+  sendRegistrationEmail: sendRegisterEmail,
 };
