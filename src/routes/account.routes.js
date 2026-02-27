@@ -1,18 +1,17 @@
 const express = require('express');
-const cookieParser = require("cookie-parser");
-
-const accountRoutes = require('./account.routes');
-const accountRouter = require('./account.routes');
-
-const app = express();
+const authMiddleware = require('../middleware/auth.middleware');
+const accountController = require('../controllers/account.controller');
 
 
-app.use(express.json());
-app.use(cookieParser());
+const router = express.Router()
+
+/**
+ * POST /api/accounts
+ * create a new Account
+ * Protected Route
+ */
+router.post("/", authMiddleware.authMiddleware, accountController.createAccountController)
 
 
-app.use("/api/auth", authRoutes);
-app.use("/api/accounts", accountRoutes);
 
-
-module.exports = app;
+module.exports = router;
