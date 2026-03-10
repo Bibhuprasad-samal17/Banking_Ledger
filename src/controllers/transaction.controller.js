@@ -81,4 +81,4 @@ async function createTransaction(req, res) {
             message: "Both accounts must be active to perform a transaction."
         })
     }
-}
+}   
