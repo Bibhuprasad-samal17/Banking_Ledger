@@ -81,4 +81,19 @@ async function createTransaction(req, res) {
             message: "Both accounts must be active to perform a transaction."
         })
     }
+
+// Step 4: Derive sender balance from ledger
+
+    const balance = await fromuserAccount.getBalance()
+
+    if(balance < ammount) {
+        res.status(400).json({
+            message: `Insufficient balance. Current Balance is ${balance}. 
+            Required balance is ${ammount}.`
+        })
+    }
+
+// Step 5: Create transaction (PENDING)
+
+
 }   
