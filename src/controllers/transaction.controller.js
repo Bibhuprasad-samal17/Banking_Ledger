@@ -95,5 +95,48 @@ async function createTransaction(req, res) {
 
 // Step 5: Create transaction (PENDING)
 
+    const session = await mongoose.startSession()
+    session.startTransaction()
+    
+    const transaction = await transactionModel.create({
+        fromAccount,
+        toAccount,
+        ammount,
+        idempotencyKey,
+        status: "PENDING"
+    }, { session })
 
-}   
+    const debitLedgerEntry = await ledgerModel.create({
+        account: fromAccount,
+        ammount: ammount,
+        transaction: transaction._id,
+        type: "DEBIT"
+    }, { session })
+
+    const creditLedgerEntry = await ledgerModel.create({
+        account: toAccount,
+        ammount: ammount,
+        transaction: transaction._id,
+        type: "CREDIT"
+    }, { session })
+
+    transaction.status = "COMPLETED"
+    await transaction.save({ session })
+
+    await session.commitTransaction()
+    session.endSession() 
+
+// Step 10: Send email notification
+
+
+    await emailService.sendTransactionEmail(req.user.email, req.user.name , ammount, toAccount)
+
+    return res.status(201).json({
+        message: "Transaction completed successfully.",
+        transaction: transaction 
+    })
+}  
+
+module.exports = {
+    createTransaction
+}
