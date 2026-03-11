@@ -137,6 +137,82 @@ async function createTransaction(req, res) {
     })
 }  
 
+async function createInitialFundsTransaction(req, res) {
+
+    const { toAccount , ammount, idempotencyKey } = req.body;
+
+    if(!toAccount || !ammount || !idempotencyKey) {
+
+        return res.status(400).json({
+            message: "To account, ammount and idempotency key are required."
+        })
+    }
+    const toUserAccount = await accountModel.findOne({
+        _id: toAccount
+    })
+    if(!toUserAccount) {
+        return res.status(404).json({
+            message: "Invalid to account."
+        })
+    }
+
+    const fromUserAccount = await accountModel.findOne ({
+        systemUser: true,
+        user: req.user._id
+    })
+
+    if(!fromUserAccount) {
+        return res.status(404).json({
+            message: "Invalid from account."
+        })
+    }
+
+    const session = await mongoose.startSession()
+    session.startTransaction()
+
+        const transaction = await transactionModel.create({
+            fromAccount: fromUserAccount._id,
+            toAccount: toUserAccount._id,
+            ammount,
+            idempotencyKey,
+            status: "PENDING"
+        }, { session })
+        const debitLedgerEntry = await ledgerModel.create({
+            account: fromUserAccount._id,
+            ammount: ammount,
+            transaction: transaction._id,
+            type: "DEBIT"
+        }, { session })
+
+        const creditLedgerEntry = await ledgerModel.create({
+            account: toUserAccount._id,
+            ammount: ammount,
+            transaction: transaction._id,
+            type: "CREDIT"
+        }, { session })
+
+        transaction.status = "COMPLETED"
+        await transaction.save({ session })
+
+        await session.commitTransaction()
+        session.endSession()
+
+
+        return res.status(201).json ( {
+            message: "Initial funds transaction completed successfully.",
+            transaction: transaction
+        })
+    }
+
+
+        
+
+
+
+
+
+
 module.exports = {
-    createTransaction
+    createTransaction,
+    createInitialFundsTransaction
 }
