@@ -52,13 +52,13 @@ async function createTransaction(req, res) {
     const isTransactionAlreadyExists = await transactionModel.findOne ({
         idempotencyKey: idempotencyKey
     })
-    if(isTransactionAlreadyEists) {
+    if(isTransactionAlreadyExists) {
         if(isTransactionAlreadyExists.status === "COMPLETED") {
             return res.status(400).json({
                 message: "Transaction already completed."
             })
         }
-        if(isTransactionModelExists.status === "PENDING") {
+        if(isTransactionAlreadyExists.status === "PENDING") {
             return res.status(200).json({
             message: "Transaction is pending. Please wait."
             })
@@ -98,27 +98,27 @@ async function createTransaction(req, res) {
     const session = await mongoose.startSession()
     session.startTransaction()
     
-    const transaction = await transactionModel.create({
-        fromAccount,
+    const transaction = new transactionModel({
+        fromAccount: fromUserAccount._id,
         toAccount,
         ammount,
         idempotencyKey,
         status: "PENDING"
-    }, { session })
+    })
 
-    const debitLedgerEntry = await ledgerModel.create({
-        account: fromAccount,
+    const debitLedgerEntry = await ledgerModel.create([{
+        account: fromUserAccount._id,
         ammount: ammount,
         transaction: transaction._id,
         type: "DEBIT"
-    }, { session })
+    }], { session })
 
-    const creditLedgerEntry = await ledgerModel.create({
-        account: toAccount,
+    const creditLedgerEntry = await ledgerModel.create([{
+        account: toUserAccount._id,
         ammount: ammount,
         transaction: transaction._id,
         type: "CREDIT"
-    }, { session })
+    }], { session })
 
     transaction.status = "COMPLETED"
     await transaction.save({ session })

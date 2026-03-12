@@ -21,6 +21,10 @@ const accountSchema = new mongoose.Schema({
         required: [true, "Currency is required"],
         default: "INR"
     },
+    systemUser: {
+        type: Boolean,
+        default: false
+    },
 },
     {
         timestamps: true
@@ -28,12 +32,12 @@ const accountSchema = new mongoose.Schema({
 )
 accountSchema.index ({ user: 1, currency: 1 })
 
-accountSchema.methods.getbalance = async function () {
+accountSchema.methods.getBalance = async function () {
 
     const balanceData = await ledgerModel.aggregate ([
         { $match: { account: this._id } },
         {
-            $goup: {
+            $group: {
                 _id:null,
                 totalDebit: {
                     $sum:{
